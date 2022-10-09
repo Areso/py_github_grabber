@@ -1,6 +1,0 @@
-ghgrabberuser
-SuperPassword_2022
-127.0.0.1
-3306
-ghgrabberdb
-Areso

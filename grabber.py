@@ -4,9 +4,18 @@ import mysql.connector
 import datetime
 import hashlib
 import requests
+import configparser
 
-mydb = {}
-username = ""
+
+def read_ini(file_path):
+    config = configparser.ConfigParser()
+    config.read(file_path)
+    for section in config.sections():
+        for key in config[section]:
+            myconfig[key]=config[section][key]
+
+
+myconfig = {}
 
 
 def myloading():
@@ -20,14 +29,11 @@ def myloading():
 
 class DBConnect:
     def __init__(self):
-        myconfig = myloading()
-        global username
-        username = myconfig[5]
         self.con = mysql.connector.connect(
-            host=myconfig[2],
-            user=myconfig[0],
-            passwd=myconfig[1],
-            database=myconfig[4],
+            host=myconfig["host"],
+            user=myconfig["username"],
+            passwd=myconfig["password"],
+            database=myconfig["db"],
             connection_timeout=86400,
             collation="utf8mb4_general_ci",
             charset="utf8mb4"
@@ -37,17 +43,21 @@ class DBConnect:
 
 def followers_api_check(user_obj):
     pagelen = 30
-    followers_len = user_obj["followers"]
+    try:
+        followers_len = user_obj["followers"]
+    except:
+        # https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting
+        raise ValueError("API responded with API rate limit error")
     full_pages = followers_len // pagelen
     records_on_last_page = followers_len % pagelen
     if records_on_last_page == 0:
         total_pages = full_pages
     else:
-        total_pages = full_pages+1
+        total_pages = full_pages + 1
     lusername = user_obj["login"]
     followers_lst = []
     for page_id in (1, total_pages):
-        page_to_parse = 'https://api.github.com/users/' + lusername  + '/followers?page=' + str(page_id)
+        page_to_parse = 'https://api.github.com/users/' + lusername + '/followers?page=' + str(page_id)
         feed = requests.get(page_to_parse, timeout=10)
         followers_json = feed.json()
         for follower_obj in followers_json:
@@ -55,7 +65,8 @@ def followers_api_check(user_obj):
     db_followers, db_hash = get_followers_from_db()
     cur_hash = hashlib.sha512(str(followers_lst).encode()).hexdigest()
     if db_hash != cur_hash:
-        insert_acc_record()
+        print("add new record")
+        insert_acc_record(lusername, followers_len, followers_lst, cur_hash)
 
 
 def get_followers_from_db():
@@ -73,15 +84,26 @@ def get_followers_from_db():
         raise ValueError("select returned not 0 or 1 record!")
 
 
-def insert_acc_record():
-    print("try to insert a new record")
-    pass
+def insert_acc_record(username_ins, followers_ins, followers_lst_ins, cur_hash_ins):
+    db_connection = DBConnect()
+    db_connection.con.ping(reconnect=True, attempts=1, delay=0)
+    print("try to insert")
+    db_connection.cur.execute("""INSERT INTO acc_history 
+    (username, followers_list, followers, hash)
+    VALUES 
+    (%(username)s, %(followers_list)s, %(followers)s, %(hash)s)""",
+                              {'username': username_ins,
+                               'followers_list': str(followers_lst_ins),
+                               'followers': followers_ins,
+                               'hash': cur_hash_ins})
+    db_connection.con.commit()
 
 
 def main():
+    read_ini("config.ini")
     db_connection = DBConnect()
     db_connection.con.ping(reconnect=True, attempts=1, delay=0)
-    global username
+    username = myconfig["user"]
     page_to_parse = 'https://api.github.com/users/' + username
     feed = requests.get(page_to_parse, timeout=10)
     ghuser_obj = feed.json()
