@@ -64,11 +64,20 @@ def get_followers_from_db():
                                          LIMIT 0, 1""")
     myresult = db_connection.cur.fetchall()
     if len(myresult) == 1:
-        return myresult[0][2], myresult[0][4]
+        db_followers_list = myresult[0][2].split(" ")
+        db_rec_hash = myresult[0][4]
+        return db_followers_list, db_rec_hash
     elif len(myresult) == 0:
         return [], ""
     else:
         raise ValueError("select returned not 0 or 1 record!")
+
+
+def list_to_str(anylist, fdelimeter=" "):
+    converted_str = ""
+    for rec in anylist:
+        converted_str += rec+fdelimeter
+    return converted_str
 
 
 def insert_acc_record(username_ins, followers_ins, followers_lst_ins, cur_hash_ins):
@@ -80,7 +89,7 @@ def insert_acc_record(username_ins, followers_ins, followers_lst_ins, cur_hash_i
     VALUES 
     (%(username)s, %(followers_list)s, %(followers)s, %(hash)s)""",
                               {'username': username_ins,
-                               'followers_list': str(followers_lst_ins),
+                               'followers_list': list_to_str(followers_lst_ins),
                                'followers': followers_ins,
                                'hash': cur_hash_ins})
     db_connection.con.commit()
