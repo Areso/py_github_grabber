@@ -53,8 +53,8 @@ def followers_api_check(user_obj):
     cur_hash = hashlib.sha512(str(followers_lst).encode()).hexdigest()
     if db_hash != cur_hash:
         insert_acc_record(lusername, followers_len, followers_lst, cur_hash)
-        find_diff(followers_lst, db_followers)
-        insert_diff()
+        diff = find_diff(followers_lst, db_followers)
+        insert_diff(diff)
 
 
 def find_diff(actual_list, db_list):
@@ -62,11 +62,14 @@ def find_diff(actual_list, db_list):
     print(db_list)
     s = set(db_list)
     temp3 = [x for x in actual_list if x not in s]
+    added = "followers added: "+list_to_str(temp3)
     s2 = set(actual_list)
     temp4 = [x for x in db_list if x not in s2]
-    print("added ", temp3)
-    print("left ", temp4)
-    return temp3, temp4
+    left = "followers left: "+list_to_str(temp4)
+    total_diff = added + "; "+left
+    # print("added ", temp3)
+    # print("left ", temp4)
+    return total_diff
 
 
 def insert_diff():
