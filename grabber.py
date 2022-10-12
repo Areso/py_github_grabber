@@ -52,8 +52,25 @@ def followers_api_check(user_obj):
     db_followers, db_hash = get_followers_from_db()
     cur_hash = hashlib.sha512(str(followers_lst).encode()).hexdigest()
     if db_hash != cur_hash:
-        print("add new record")
         insert_acc_record(lusername, followers_len, followers_lst, cur_hash)
+        find_diff(followers_lst, db_followers)
+        insert_diff()
+
+
+def find_diff(actual_list, db_list):
+    print(actual_list)
+    print(db_list)
+    s = set(db_list)
+    temp3 = [x for x in actual_list if x not in s]
+    s2 = set(actual_list)
+    temp4 = [x for x in db_list if x not in s2]
+    print("added ", temp3)
+    print("left ", temp4)
+    return temp3, temp4
+
+
+def insert_diff():
+    pass
 
 
 def get_followers_from_db():
@@ -75,8 +92,13 @@ def get_followers_from_db():
 
 def list_to_str(anylist, fdelimeter=" "):
     converted_str = ""
+    iterator = 0
     for rec in anylist:
-        converted_str += rec+fdelimeter
+        if iterator == len(anylist) - 1:
+            converted_str += rec
+        else:
+            converted_str += rec + fdelimeter
+        iterator += 1
     return converted_str
 
 
