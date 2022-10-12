@@ -7,24 +7,15 @@ import requests
 import configparser
 
 
+myconfig = {}
+
+
 def read_ini(file_path):
     config = configparser.ConfigParser()
     config.read(file_path)
     for section in config.sections():
         for key in config[section]:
-            myconfig[key]=config[section][key]
-
-
-myconfig = {}
-
-
-def myloading():
-    cfgpath = "config_mysql.txt"
-    fconf = open(cfgpath, 'r')
-    tconf = fconf.read()
-    fconf.close()
-    conf_list = tconf.split('\n')
-    return conf_list
+            myconfig[key] = config[section][key]
 
 
 class DBConnect:
@@ -43,11 +34,7 @@ class DBConnect:
 
 def followers_api_check(user_obj):
     pagelen = 30
-    try:
-        followers_len = user_obj["followers"]
-    except:
-        # https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting
-        raise ValueError("API responded with API rate limit error")
+    followers_len = user_obj["followers"]
     full_pages = followers_len // pagelen
     records_on_last_page = followers_len % pagelen
     if records_on_last_page == 0:
@@ -58,7 +45,7 @@ def followers_api_check(user_obj):
     followers_lst = []
     for page_id in (1, total_pages):
         page_to_parse = 'https://api.github.com/users/' + lusername + '/followers?page=' + str(page_id)
-        feed = requests.get(page_to_parse, timeout=10)
+        feed = requests_wrapper(page_to_parse)
         followers_json = feed.json()
         for follower_obj in followers_json:
             followers_lst.append(follower_obj["login"])
@@ -99,13 +86,27 @@ def insert_acc_record(username_ins, followers_ins, followers_lst_ins, cur_hash_i
     db_connection.con.commit()
 
 
+def requests_wrapper(page):
+    if myconfig["token"] != "notoken":
+        auth = 'acces_token ' + myconfig["token"]
+        feed = requests.get(page, timeout=10, headers={'Authorization': auth})
+    else:
+        feed = requests.get(page, timeout=10)
+
+    if feed.status_code == 200:
+        return feed
+    else:
+        # https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting
+        raise ValueError("API responded with API rate limit error")
+
+
 def main():
     read_ini("config.ini")
     db_connection = DBConnect()
     db_connection.con.ping(reconnect=True, attempts=1, delay=0)
     username = myconfig["user"]
     page_to_parse = 'https://api.github.com/users/' + username
-    feed = requests.get(page_to_parse, timeout=10)
+    feed = requests_wrapper(page_to_parse)
     ghuser_obj = feed.json()
     followers_api_check(ghuser_obj)
 
