@@ -54,26 +54,36 @@ def followers_api_check(user_obj):
     if db_hash != cur_hash:
         insert_acc_record(lusername, followers_len, followers_lst, cur_hash)
         diff = find_diff(followers_lst, db_followers)
-        insert_diff(diff)
+        insert_diff(diff, lusername)
 
 
 def find_diff(actual_list, db_list):
-    print(actual_list)
-    print(db_list)
     s = set(db_list)
     temp3 = [x for x in actual_list if x not in s]
-    added = "followers added: "+list_to_str(temp3)
+    added = ""
+    left = ""
+    if len(temp3) != 0:
+        added += "followers added: "+list_to_str(temp3)
     s2 = set(actual_list)
     temp4 = [x for x in db_list if x not in s2]
-    left = "followers left: "+list_to_str(temp4)
-    total_diff = added + "; "+left
-    # print("added ", temp3)
-    # print("left ", temp4)
+    if len(temp4) != 0:
+        if added != "":
+            left += "; "
+        left += "followers left: "+list_to_str(temp4)
+    total_diff = added + left
     return total_diff
 
 
-def insert_diff():
-    pass
+def insert_diff(msg, changed_username):
+    db_connection = DBConnect()
+    db_connection.con.ping(reconnect=True, attempts=1, delay=0)
+    db_connection.cur.execute("""INSERT INTO changes 
+    (username, msg)
+    VALUES 
+    (%(username)s, %(msg)s)""",
+                              {'username': changed_username,
+                               'msg': msg})
+    db_connection.con.commit()
 
 
 def get_followers_from_db():
@@ -108,7 +118,6 @@ def list_to_str(anylist, fdelimeter=" "):
 def insert_acc_record(username_ins, followers_ins, followers_lst_ins, cur_hash_ins):
     db_connection = DBConnect()
     db_connection.con.ping(reconnect=True, attempts=1, delay=0)
-    print("try to insert")
     db_connection.cur.execute("""INSERT INTO acc_history 
     (username, followers_list, followers, hash)
     VALUES 
