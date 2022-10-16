@@ -168,14 +168,15 @@ def gather_repos_info(ghuser, repos_count):
 
             # pulls_url - has no count!
             watchers_pages = get_pages_num(watchers_count)
-            for watcher_pg_id in range(0, watchers_pages):
-                page_to_parse = 'https://api.github.com/repos/' + ghuser + '/'+reponame+'/watchers?page='+str(watcher_pg_id)
-                watchers_feed = requests_wrapper(page_to_parse)
-                watchers_json = watchers_feed.json()
-                for follower_obj in watchers_json:
-                    watchers.append(follower_obj["login"])
-            print(page_to_parse)
-            print(watchers)
+            if watchers_count > 0:
+                for watcher_pg_id in range(0, watchers_pages):
+                    page_to_parse = 'https://api.github.com/repos/' + ghuser + '/'+reponame+'/watchers?page='+str(watcher_pg_id)
+                    watchers_feed = requests_wrapper(page_to_parse)
+                    watchers_json = watchers_feed.json()
+                    for follower_obj in watchers_json:
+                        watchers.append(follower_obj["login"])
+                print(page_to_parse)
+                print(watchers)
     pass
 
 
