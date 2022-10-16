@@ -33,14 +33,8 @@ class DBConnect:
 
 
 def followers_api_check(user_obj):
-    pagelen = 30
     followers_len = user_obj["followers"]
-    full_pages = followers_len // pagelen
-    records_on_last_page = followers_len % pagelen
-    if records_on_last_page == 0:
-        total_pages = full_pages
-    else:
-        total_pages = full_pages + 1
+    total_pages = get_pages_num(followers_len)
     lusername = user_obj["login"]
     followers_lst = []
     for page_id in (1, total_pages):
@@ -131,7 +125,7 @@ def insert_acc_record(username_ins, followers_ins, followers_lst_ins, cur_hash_i
 
 def requests_wrapper(page):
     if myconfig["token"] != "notoken":
-        auth = 'acces_token ' + myconfig["token"]
+        auth = 'Bearer ' + myconfig["token"]
         feed = requests.get(page, timeout=10, headers={'Authorization': auth})
     else:
         feed = requests.get(page, timeout=10)
@@ -143,6 +137,48 @@ def requests_wrapper(page):
         raise ValueError("API responded with API rate limit error")
 
 
+def get_pages_num(num_of_records):
+    pagelen = 30
+    full_pages = num_of_records // pagelen
+    records_on_last_page = num_of_records % pagelen
+    if records_on_last_page == 0:
+        total_pages = full_pages
+    else:
+        total_pages = full_pages + 1
+    if total_pages == 0:
+        total_pages = 1
+    return total_pages
+
+
+def gather_repos_info(ghuser, repos_count):
+    total_pages = get_pages_num(repos_count)
+    for page_id in (1, total_pages):
+        page_to_parse = 'https://api.github.com/users/' + ghuser + '/repos?page=' + str(page_id)
+        feed = requests_wrapper(page_to_parse)
+        repos_json = feed.json()
+        for repo_obj in repos_json:
+            reponame = repo_obj["name"]
+            watchers_count = repo_obj["watchers_count"]
+            stargazers_count = repo_obj["stargazers_count"]
+            forks_count = repo_obj["forks_count"]
+            issues_count = repo_obj["open_issues_count"]
+            watchers = []
+            stargazers = []
+            forkers = []
+
+            # pulls_url - has no count!
+            watchers_pages = get_pages_num(watchers_count)
+            for watcher_pg_id in (1, watchers_pages):
+                page_to_parse = 'https://api.github.com/repos/' + ghuser + '/'+reponame+'/watchers?page='+str(watcher_pg_id)
+                watchers_feed = requests_wrapper(page_to_parse)
+                watchers_json = watchers_feed.json()
+                for follower_obj in watchers_json:
+                    watchers.append(follower_obj["login"])
+            print(page_to_parse)
+            print(watchers)
+    pass
+
+
 def main():
     read_ini("config.ini")
     db_connection = DBConnect()
@@ -152,6 +188,8 @@ def main():
     feed = requests_wrapper(page_to_parse)
     ghuser_obj = feed.json()
     followers_api_check(ghuser_obj)
+    public_repos_count = ghuser_obj["public_repos"]
+    gather_repos_info(username, public_repos_count)
 
 
 main()

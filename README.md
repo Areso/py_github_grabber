@@ -8,10 +8,10 @@ We will quickly go over the specific rate limits for Github's REST APIs and some
     Unauthenticated Requests: 60 requests/hr
     Authenticated User Requests: 5000 requests/hr
 ```
-To check current limit `curl -I https://api.github.com/users/octocat`  
+To check current limit `curl -I https://api.github.com/users/Areso`  
 403 means the limit is depleted  
 200 means the limit is still valid  
-
+To check current limit with token `curl -I -H "Authorization: Bearer your_token_here" https://api.github.com/users/Areso`   
 This project could work without authentication, only for users with small amount of repos (<50).  
 
 More information could be found there: https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting  
