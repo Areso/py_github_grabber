@@ -37,7 +37,7 @@ def followers_api_check(user_obj):
     total_pages = get_pages_num(followers_len)
     lusername = user_obj["login"]
     followers_lst = []
-    for page_id in (1, total_pages):
+    for page_id in range(1, total_pages+1):
         page_to_parse = 'https://api.github.com/users/' + lusername + '/followers?page=' + str(page_id)
         feed = requests_wrapper(page_to_parse)
         followers_json = feed.json()
@@ -149,6 +149,12 @@ def get_pages_num(num_of_records):
         total_pages = 1
     return total_pages
 
+def get_repo(url):
+    page_to_parse = url
+    feed = requests_wrapper(page_to_parse)
+    repo_json = feed.json()
+    return repo_json
+
 
 def gather_repos_info(ghuser, repos_count):
     total_pages = get_pages_num(repos_count)
@@ -156,27 +162,46 @@ def gather_repos_info(ghuser, repos_count):
         page_to_parse = 'https://api.github.com/users/' + ghuser + '/repos?page=' + str(page_id)
         feed = requests_wrapper(page_to_parse)
         repos_json = feed.json()
-        for repo_obj in repos_json:
-            reponame = repo_obj["name"]
-            watchers_count = repo_obj["watchers_count"]
+        print(page_to_parse)
+        for repo_item in repos_json:
+            repourl = repo_item["url"]
+            repo_obj = get_repo(repourl)
+            watchers_count = repo_obj["subscribers_count"]
             stargazers_count = repo_obj["stargazers_count"]
             forks_count = repo_obj["forks_count"]
             issues_count = repo_obj["open_issues_count"]
-            watchers = []
+            rwatchers = []
             stargazers = []
             forkers = []
 
             # pulls_url - has no count!
             watchers_pages = get_pages_num(watchers_count)
             if watchers_count > 0:
-                for watcher_pg_id in range(0, watchers_pages):
-                    page_to_parse = 'https://api.github.com/repos/' + ghuser + '/'+reponame+'/watchers?page='+str(watcher_pg_id)
+                for watchers_pg_id in range(1, watchers_pages+1):
+                    page_to_parse = repourl + '/subscribers?page=' +str(watchers_pg_id)
                     watchers_feed = requests_wrapper(page_to_parse)
                     watchers_json = watchers_feed.json()
-                    for follower_obj in watchers_json:
-                        watchers.append(follower_obj["login"])
-                print(page_to_parse)
-                print(watchers)
+                    for watcher_obj in watchers_json:
+                        rwatchers.append(watcher_obj["login"])
+
+            stargazers_pages = get_pages_num(stargazers_count)
+            if stargazers_count > 0:
+                for stargazers_pg_id in range(1, stargazers_pages + 1):
+                    page_to_parse = repourl + '/subscribers?page=' + str(stargazers_pg_id)
+                    stargazers_feed = requests_wrapper(page_to_parse)
+                    stargazers_json = stargazers_feed.json()
+                    for stargazer_obj in stargazers_json:
+                        stargazers.append(stargazer_obj["login"])
+
+            forks_pages = get_pages_num(forks_count)
+            if forks_count > 0:
+                for forks_pg_id in range(1, stargazers_pages + 1):
+                    page_to_parse = repourl + '/subscribers?page=' + str(forks_pg_id)
+                    forks_feed = requests_wrapper(page_to_parse)
+                    forks_json = forks_feed.json()
+                    for fork_obj in forks_json:
+                        forkers.append(fork_obj["login"])
+
     pass
 
 
