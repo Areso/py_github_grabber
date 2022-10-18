@@ -22,6 +22,9 @@ class MyRepoClass:
     def __init__(self, repourl):
         self.repourl = repourl
 
+    def hash(self):
+        return(hashlib.sha512(str(self.__dict__)).encode()).hexdigest()
+
     def __repr__(self) -> str:
         return str(self.__dict__)
 
@@ -94,27 +97,6 @@ def get_followers_from_db():
     db_connection.cur.execute("""SELECT * FROM acc_history
                                          ORDER BY id_record DESC
                                          LIMIT 0, 1""")
-    myresult = db_connection.cur.fetchall()
-    if len(myresult) == 1:
-        db_followers_list = myresult[0][2].split(" ")
-        db_rec_hash = myresult[0][4]
-        return db_followers_list, db_rec_hash
-    elif len(myresult) == 0:
-        return [], ""
-    else:
-        raise ValueError("select returned not 0 or 1 record!")
-
-
-def get_repo_from_db():
-    db_connection = DBConnect()
-    db_connection.con.ping(reconnect=True, attempts=1, delay=0)
-    db_connection.cur.execute("""SELECT * FROM repo_history
-                                         WHERE reponame = %(reponame)s,
-                                         AND username = %(username)s,
-                                         ORDER BY id_record DESC
-                                         LIMIT 0, 1""",
-                              {'username': username,
-                               'reponame': reponame})
     myresult = db_connection.cur.fetchall()
     if len(myresult) == 1:
         db_followers_list = myresult[0][2].split(" ")
@@ -243,6 +225,7 @@ def enrich_with_pulls_count(obj):
         prs_page_id += 1
         for pull_obj in pulls_json:
             prs += 1
+    obj.pr_count = prs
     return obj
 
 
@@ -257,6 +240,37 @@ def is_next_page_pulls_record_number(url, page):
         return True
     else:
         return False
+
+
+def get_repo_from_db(repourl):
+    db_connection = DBConnect()
+    db_connection.con.ping(reconnect=True, attempts=1, delay=0)
+    db_connection.cur.execute("""SELECT * FROM repo_history
+                                         WHERE repourl = %(repourl)s
+                                         ORDER BY id_record DESC
+                                         LIMIT 0, 1""",
+                              {'repourl': repourl})
+    myresult = db_connection.cur.fetchall()
+    if len(myresult) == 1:
+        dbrepo = MyRepoClass(myresult[0][1])
+        dbrepo.watchers_count = myresult[0][2]
+        dbrepo.stargazers_count = myresult[0][3]
+        dbrepo.forks_count = myresult[0][4]
+        dbrepo.rwatchers = myresult[0][5].split(" ")
+        dbrepo.stargazers = myresult[0][6].split(" ")
+        dbrepo.forkers = myresult[0][7].split(" ")
+        dbrepo.issues_count = myresult[0][8]
+        dbrepo.pr_count = myresult[0][9]
+        return dbrepo, dbrepo.hash()
+    elif len(myresult) == 0:
+        return None, ""
+    else:
+        raise ValueError("select returned not 0 or 1 record!")
+
+
+def compare_and_update(obj):
+    dbrepo = get_repo_from_db(obj.repourl)
+    print(dbrepo)
 
 
 def gather_repos_info(ghuser, repos_count):
@@ -276,7 +290,8 @@ def gather_repos_info(ghuser, repos_count):
             myrepoobj = enrich_with_pulls_count(myrepoobj)
             myrepoobj.issues_count = repo_obj["open_issues_count"]
             print(myrepoobj)
-
+            compare_and_update(myrepoobj)
+            print("======================")
 
 def main():
     read_ini("config.ini")
