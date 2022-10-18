@@ -254,13 +254,13 @@ def get_repo_from_db(repourl):
     if len(myresult) == 1:
         dbrepo = MyRepoClass(myresult[0][1])
         dbrepo.watchers_count = myresult[0][2]
-        dbrepo.stargazers_count = myresult[0][3]
-        dbrepo.forks_count = myresult[0][4]
         dbrepo.rwatchers = myresult[0][5].split(" ")
+        dbrepo.stargazers_count = myresult[0][3]
         dbrepo.stargazers = myresult[0][6].split(" ")
+        dbrepo.forks_count = myresult[0][4]
         dbrepo.forkers = myresult[0][7].split(" ")
-        dbrepo.issues_count = myresult[0][8]
         dbrepo.pr_count = myresult[0][9]
+        dbrepo.issues_count = myresult[0][8]
         return dbrepo, dbrepo.hash()
     elif len(myresult) == 0:
         return None, ""
@@ -299,6 +299,10 @@ def insert_or_update(obj_to_record, event="update"):
 
 def compare_and_update(api_obj):
     dbrepo, dbrepo_hash = get_repo_from_db(api_obj.repourl)
+    print("db is:")
+    print(dbrepo)
+    print("api is:")
+    print(api_obj)
     if dbrepo is not None:
         if api_obj.hash() != dbrepo_hash:
             insert_or_update(api_obj)
@@ -322,7 +326,6 @@ def gather_repos_info(ghuser, repos_count):
             myrepoobj = enrich_with_forkers(myrepoobj, repo_obj["forks_count"])
             myrepoobj = enrich_with_pulls_count(myrepoobj)
             myrepoobj.issues_count = repo_obj["open_issues_count"]
-            print(myrepoobj)
             compare_and_update(myrepoobj)
             print("======================")
 
