@@ -1,8 +1,7 @@
 use ghgrabberdb;
 CREATE TABLE repo_history (
 id_record int(8) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-username varchar(32) NOT NULL,
-reponame varchar(128) NOT NULL,
+repourl varchar(128) NOT NULL,
 watchers_count int(8) NOT NULL DEFAULT 0,
 stargazers_count int(8) NOT NULL DEFAULT 0,
 forks_count int(8) NOT NULL DEFAULT 0,
