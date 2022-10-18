@@ -23,7 +23,7 @@ class MyRepoClass:
         self.repourl = repourl
 
     def hash(self):
-        return(hashlib.sha512(str(self.__dict__)).encode()).hexdigest()
+        return hashlib.sha512(str(self.__dict__).encode('utf-8')).hexdigest()
 
     def __repr__(self) -> str:
         return str(self.__dict__)
@@ -268,9 +268,42 @@ def get_repo_from_db(repourl):
         raise ValueError("select returned not 0 or 1 record!")
 
 
-def compare_and_update(obj):
-    dbrepo = get_repo_from_db(obj.repourl)
-    print(dbrepo)
+def insert_or_update(obj_to_record, event="update"):
+    db_connection = DBConnect()
+    db_connection.con.ping(reconnect=True, attempts=1, delay=0)
+    # watchers, stargazers, forkers,
+    # %(watchers)s, %(stargazers)s, %(forkers)s,
+    #print(type())
+    db_connection.cur.execute("""INSERT INTO repo_history (repourl, 
+    watchers_count, stargazers_count, forks_count,
+    watchers, stargazers, forkers,
+    issues_count, pr_count,
+    hash)
+    VALUES 
+    (%(repourl)s, 
+    %(watchers_count)s, %(stargazers_count)s, %(forks_count)s,
+    %(watchers)s, %(stargazers)s, %(forkers)s,
+    %(issues_count)s, %(pr_count)s, %(hash)s);""",
+                              {'repourl': obj_to_record.repourl,
+                               'watchers_count': obj_to_record.watchers_count,
+                               'stargazers_count': obj_to_record.stargazers_count,
+                               'forks_count': obj_to_record.forks_count,
+                               'watchers': list_to_str(obj_to_record.rwatchers),
+                               'stargazers': list_to_str(obj_to_record.stargazers),
+                               'forkers': list_to_str(obj_to_record.forkers),
+                               'issues_count': obj_to_record.issues_count,
+                               'pr_count': obj_to_record.pr_count,
+                               'hash': obj_to_record.hash()})
+    db_connection.con.commit()
+
+
+def compare_and_update(api_obj):
+    dbrepo, dbrepo_hash = get_repo_from_db(api_obj.repourl)
+    if dbrepo is not None:
+        if api_obj.hash() != dbrepo_hash:
+            insert_or_update(api_obj)
+    else:
+        insert_or_update(api_obj, "insert")
 
 
 def gather_repos_info(ghuser, repos_count):
@@ -292,6 +325,7 @@ def gather_repos_info(ghuser, repos_count):
             print(myrepoobj)
             compare_and_update(myrepoobj)
             print("======================")
+
 
 def main():
     read_ini("config.ini")
