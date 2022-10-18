@@ -242,6 +242,13 @@ def is_next_page_pulls_record_number(url, page):
         return False
 
 
+def drop_empty_item(myarray):
+    if len(myarray) == 1:
+        if myarray[0] == '':
+            return []
+    return myarray
+
+
 def get_repo_from_db(repourl):
     db_connection = DBConnect()
     db_connection.con.ping(reconnect=True, attempts=1, delay=0)
@@ -254,11 +261,11 @@ def get_repo_from_db(repourl):
     if len(myresult) == 1:
         dbrepo = MyRepoClass(myresult[0][1])
         dbrepo.watchers_count = myresult[0][2]
-        dbrepo.rwatchers = myresult[0][5].split(" ")
+        dbrepo.rwatchers = drop_empty_item(myresult[0][5].split(" "))
         dbrepo.stargazers_count = myresult[0][3]
-        dbrepo.stargazers = myresult[0][6].split(" ")
+        dbrepo.stargazers = drop_empty_item(myresult[0][6].split(" "))
         dbrepo.forks_count = myresult[0][4]
-        dbrepo.forkers = myresult[0][7].split(" ")
+        dbrepo.forkers = drop_empty_item(myresult[0][7].split(" "))
         dbrepo.pr_count = myresult[0][9]
         dbrepo.issues_count = myresult[0][8]
         return dbrepo, dbrepo.hash()
@@ -312,7 +319,7 @@ def compare_and_update(api_obj):
 
 def gather_repos_info(ghuser, repos_count):
     total_pages = get_pages_num(repos_count)
-    for page_id in (1, total_pages):
+    for page_id in range(1, total_pages+1):
         page_to_parse = 'https://api.github.com/users/' + ghuser + '/repos?page=' + str(page_id)
         feed = requests_wrapper(page_to_parse)
         repos_json = feed.json()
