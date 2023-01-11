@@ -117,8 +117,9 @@ def drop_empty_item(myarray):
 
 def gather_repos_info(ghuser, repos_count):
     total_pages = get_pages_num(repos_count)
-    pages_qty = total_pages+1
+    # pages_qty = total_pages+1
     pages_qty = 2
+    projects_to_boast.clear()
     for page_id in range(1, pages_qty):
         page_to_parse = 'https://api.github.com/users/' + ghuser + '/repos?page=' + str(page_id)
         feed = requests_wrapper(page_to_parse)
